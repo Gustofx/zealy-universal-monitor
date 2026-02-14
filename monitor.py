@@ -15,12 +15,12 @@ COMMUNITIES = [
 ]
 # =========================
 
-# Telegram credentials (set as GitHub secrets)
+# Telegram credentials (from GitHub Secrets)
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 
 if not BOT_TOKEN or not CHAT_ID:
-    print("❌ BOT_TOKEN or CHAT_ID not set!")
+    print("❌ ERROR: BOT_TOKEN or CHAT_ID not set!")
     exit(1)
 
 def send(msg):
@@ -32,6 +32,10 @@ def send(msg):
         )
     except Exception as e:
         print(f"⚠ Failed to send Telegram message: {e}")
+
+# Startup alert
+send("✅ Zealy Universal Monitor started successfully!")
+print("🚀 Zealy Universal Monitor started successfully!")
 
 def fetch_page_json(community):
     """Fetch Zealy questboard page JSON"""
@@ -104,9 +108,13 @@ while True:
         # Update sprint IDs
         old[community]["sprints"] = [str(s["id"]) for s in sprints]
 
+        # Log info
+        print(f"✅ {len(quests)} quests and {len(sprints)} sprints checked for {community}")
+
     # Save data for next iteration
     with open("data.json", "w") as f:
         json.dump(old, f)
 
     # Wait 30 seconds before next check
+    print("⏱ Waiting 30 seconds before next check...\n")
     time.sleep(30)
