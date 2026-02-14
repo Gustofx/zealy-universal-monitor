@@ -2,10 +2,10 @@ import requests
 import json
 import os
 import re
+import time
 
 # =========================
 # 🔶 COMMUNITIES TO MONITOR
-# replace with active communities
 COMMUNITIES = [
     "Verasity",
     "Lumia",
@@ -15,70 +15,98 @@ COMMUNITIES = [
 ]
 # =========================
 
-BOT_TOKEN = os.environ["8374656735:AAHcy8FSz-MPvfUTfAWUZS2WYdvGcevVeNg"]   # <<ADD IN GITHUB SECRETS>>
-CHAT_ID = os.environ["8123412199"]       # <<ADD IN GITHUB SECRETS>>
+# Telegram credentials (set as GitHub secrets)
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHAT_ID = os.environ.get("CHAT_ID")
+
+if not BOT_TOKEN or not CHAT_ID:
+    print("❌ BOT_TOKEN or CHAT_ID not set!")
+    exit(1)
 
 def send(msg):
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": msg}
-    )
+    """Send a Telegram message"""
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            data={"chat_id": CHAT_ID, "text": msg}
+        )
+    except Exception as e:
+        print(f"⚠ Failed to send Telegram message: {e}")
 
 def fetch_page_json(community):
+    """Fetch Zealy questboard page JSON"""
     url = f"https://zealy.io/cw/{community}/questboard"
-    html = requests.get(url).text
-
-    match = re.search(r'__NEXT_DATA__" type="application/json">(.*?)</script>', html)
-
-    if not match:
+    try:
+        html = requests.get(url, timeout=10).text
+        match = re.search(r'__NEXT_DATA__" type="application/json">(.*?)</script>', html)
+        if not match:
+            print(f"⚠ Could not find JSON data for {community}")
+            return None
+        return json.loads(match.group(1))
+    except Exception as e:
+        print(f"⚠ Error fetching {community}: {e}")
         return None
 
-    return json.loads(match.group(1))
-
+# Load saved data or create empty structure
 try:
     with open("data.json") as f:
         old = json.load(f)
 except:
     old = {}
 
-for community in COMMUNITIES:
+# =========================
+# LOOP FOREVER EVERY 30 SECONDS
+while True:
+    for community in COMMUNITIES:
+        print(f"🔎 Checking community: {community}")
 
-    data = fetch_page_json(community)
-    if not data:
-        continue
+        data = fetch_page_json(community)
+        if not data:
+            continue
 
-    quests = data["props"]["pageProps"]["campaign"]["quests"]
-    sprints = data["props"]["pageProps"]["campaign"].get("sprints", [])
+        quests = data["props"]["pageProps"]["campaign"].get("quests", [])
+        sprints = data["props"]["pageProps"]["campaign"].get("sprints", [])
 
-    old.setdefault(community, {"quests": {}, "sprints": []})
+        old.setdefault(community, {"quests": {}, "sprints": []})
 
-    for q in quests:
-        qid = q["id"]
-        title = q.get("title","No title")
-        xp = q.get("xp",0)
-        status = q.get("status","unknown")
-        hidden = q.get("isHidden", False)
+        # ----- QUEST MONITOR -----
+        for q in quests:
+            qid = str(q["id"])
+            title = q.get("title", "No title")
+            xp = q.get("xp", 0)
+            status = q.get("status", "unknown")
+            hidden = q.get("isHidden", False)
 
-        if qid not in old[community]["quests"]:
-            send(f"🔥 NEW QUEST ({community})\n{title}\nXP: {xp}\nStatus: {status}")
-        else:
-            old_q = old[community]["quests"][qid]
-            if xp != old_q["xp"] or status != old_q["status"]:
-                send(f"⚡ QUEST UPDATED ({community})\n{title}\nXP: {xp}\nStatus: {status}")
+            # New quest
+            if qid not in old[community]["quests"]:
+                send(f"🔥 NEW QUEST ({community})\n{title}\nXP: {xp}\nStatus: {status}")
+                if hidden:
+                    send(f"👀 HIDDEN QUEST DETECTED EARLY ({community})\n{title}")
 
-        if hidden and qid not in old[community]["quests"]:
-            send(f"👀 HIDDEN QUEST DETECTED EARLY ({community})\n{title}")
+            # XP or status change
+            else:
+                old_q = old[community]["quests"][qid]
+                if xp != old_q["xp"] or status != old_q["status"]:
+                    send(f"⚡ QUEST UPDATED ({community})\n{title}\nXP: {xp}\nStatus: {status}")
 
-        old[community]["quests"][qid] = {"xp": xp, "status": status}
+            # Save latest quest data
+            old[community]["quests"][qid] = {"xp": xp, "status": status}
 
-    for s in sprints:
-        sid = s["id"]
-        name = s.get("name","Sprint")
+        # ----- SPRINT MONITOR -----
+        for s in sprints:
+            sid = str(s["id"])
+            name = s.get("name", "Sprint")
+            active = s.get("active", False)
 
-        if sid not in old[community]["sprints"]:
-            send(f"🚀 NEW SPRINT ({community})\n{name}")
+            if sid not in old[community]["sprints"]:
+                send(f"🚀 NEW SPRINT ({community})\n{name}\nActive: {active}")
 
-    old[community]["sprints"] = [s["id"] for s in sprints]
+        # Update sprint IDs
+        old[community]["sprints"] = [str(s["id"]) for s in sprints]
 
-with open("data.json","w") as f:
-    json.dump(old, f)
+    # Save data for next iteration
+    with open("data.json", "w") as f:
+        json.dump(old, f)
+
+    # Wait 30 seconds before next check
+    time.sleep(30)
