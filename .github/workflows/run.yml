@@ -1,4 +1,4 @@
-name: Zealy Universal Monitor
+name: zealy-universal-monitor
 
 on:
   schedule:
