@@ -9,8 +9,8 @@ import re
 COMMUNITIES = [
     "Verasity",
     "Lumia",
-    "CosmoFox"
-    "Coingarage"
+    "CosmoFox",
+    "Coingarage",
     "Coinquant"
 ]
 # =========================
