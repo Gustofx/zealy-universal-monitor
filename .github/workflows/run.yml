@@ -1,4 +1,4 @@
-name: zealy-universal-monitor
+name: zealy universal monitor
 
 on:
   schedule:
@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      BOT_TOKEN: ${{ 8374656735:AAHcy8FSz-MPvfUTfAWUZS2WYdvGcevVeNg }}   # << ADD IN GITHUB SECRETS >>
-      CHAT_ID: ${{ 8123412199 }}       # << ADD IN GITHUB SECRETS >>
+      BOT_TOKEN: ${{ secrets.8374656735:AAHcy8FSz-MPvfUTfAWUZS2WYdvGcevVeNg }}   # << ADD IN GITHUB SECRETS >>
+      CHAT_ID: ${{ secrets.8123412199 }}       # << ADD IN GITHUB SECRETS >>
 
     steps:
       - name: Checkout Repository
