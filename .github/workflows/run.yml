@@ -13,5 +13,5 @@ jobs:
       - run: pip install requests
       - run: python monitor.py
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
+          BOT_TOKEN: ${{ 8374656735:AAHcy8FSz-MPvfUTfAWUZS2WYdvGcevVeNg }}
+          CHAT_ID: ${{ 8123412199 }}
